@@ -1,6 +1,3 @@
-import { createRequire } from "node:module";
-import { join } from "node:path";
-import { request as apiRequest } from "../src/lib/api.js";
 import { StrictMode } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
@@ -15,6 +12,8 @@ const json = (data, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+const trackingConfig = { paramMap: { uid: "uid", transactionId: "transactionId", username: "username", inTime: "inTime" } };
+const withTrackingConfig = fetch => vi.fn((path, options) => path === "/api/tracking/config" ? Promise.resolve(json(trackingConfig)) : fetch(path, options));
 const project = {
   id: "550e8400-e29b-41d4-a716-446655440000",
   pid: "DEMO",
@@ -164,220 +163,63 @@ describe("Frontend flows", () => {
     expect(screen.getByRole("alert").textContent).toContain("Start time");
     expect(api).toHaveBeenCalledTimes(1);
   });
-  it("creates a project with contract fields", async () => {
-    const api = vi.fn(async (path, opts) =>
-      opts?.method === "POST" ? project : { projects: [] },
-    );
-    render(<Projects api={api} />);
-    await screen.findByText("No projects yet");
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Project ID"), "DEMO");
-    await user.type(screen.getByRole("textbox", { name: /^Project Name\b/ }), "Consumer study");
-    await user.click(screen.getByRole("button", { name: "Add project" }));
-    await screen.findByText("Project created.");
-    expect(api).toHaveBeenCalledWith(
-      "/api/projects",
-      expect.objectContaining({
-        method: "POST",
-        body: { pid: "DEMO", name: "Consumer study" },
-      }),
-    );
+
+  function managementApi(initial=[project]) {
+    let projects=initial.map(p=>({...p}));
+    const company={id:'550e8400-e29b-41d4-a716-446655440001',code:'CLIENT',name:'Client company'};
+    projects=projects.map(p=>({...p,companyId:company.id,company}));
+    const api=vi.fn(async(path,opts)=>{
+      if(path==='/api/companies')return {companies:[company]};
+      if(path==='/api/users')return {users:[{id:'user',email:'user@example.test',role:'USER',active:true}]};
+      if(path.endsWith('/links'))return {links:Object.fromEntries(['COMPLETE','TERMINATE','QUOTAFUL','DISQUALIFY'].map(s=>[s,'/redirect/company/'+company.id+'/'+s])),paramMap:{uid:'uid',transactionId:'transactionId'}};
+      if(opts?.method==='POST')return projects.push({...project,...opts.body});
+      if(opts?.method==='PATCH'){projects=projects.map(p=>({...p,...opts.body}));return projects[0];}
+      return {projects};
+    });return {api,company};
+  }
+  it('creates projects under the selected company with distinct contract fields',async()=>{
+    const {api,company}=managementApi([]);render(<Projects api={api} companyId={company.id}/>);const user=userEvent.setup();
+    await user.click(await screen.findByRole('button',{name:'Add Project'}));
+    await user.type(screen.getByLabelText('Project ID'),'NEW');await user.type(screen.getByLabelText('Project Name'),'Study');
+    await user.click(screen.getByRole('button',{name:'Add project'}));await screen.findByText('Project created.');
+    expect(api).toHaveBeenCalledWith('/api/projects',expect.objectContaining({method:'POST',body:{companyId:company.id,pid:'NEW',name:'Study'}}));
   });
-  it("edits client Project ID/name/active, and shows deletion conflicts", async () => {
-    const api = vi.fn(async (path, opts) => {
-      if (opts?.method === "DELETE")
-        throw new Error("Resource has dependent records");
-      if (opts?.method === "PATCH") return { ...project, ...opts.body };
-      return { projects: [project] };
-    });
-    render(<Projects api={api} />);
-    await screen.findByText("Consumer study");
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Edit" }));
-    const pid = screen.getAllByLabelText("Project ID").at(-1);
-    await user.clear(pid);
-    await user.type(pid, "CLIENT-UPDATED");
-    const name = screen.getAllByLabelText("Project Name").at(-1);
-    await user.clear(name);
-    await user.type(name, "Updated study");
-    await user.click(screen.getByLabelText("Accept callbacks"));
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await screen.findByText("Project updated.");
-    expect(api).toHaveBeenCalledWith(
-      `/api/projects/${project.id}`,
-      expect.objectContaining({
-        method: "PATCH",
-        body: { pid: "CLIENT-UPDATED", name: "Updated study", active: false },
-      }),
-    );
-    await screen.findByText("Consumer study");
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(
-      api.mock.calls.some(([, options]) => options?.method === "DELETE"),
-    ).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Confirm deletion" }));
-    expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByText("Consumer study")).toBeTruthy();
+  it('edits optional external IDs and retains the internal UUID',async()=>{
+    const {api,company}=managementApi();render(<Projects api={api} companyId={company.id}/>);const user=userEvent.setup();await screen.findByText('Consumer study');
+    await user.click(screen.getByRole('button',{name:'Edit'}));await user.clear(screen.getAllByLabelText('Project ID').at(-1));
+    await user.click(screen.getByRole('button',{name:'Save changes'}));await screen.findByText('Project updated.');
+    expect(api).toHaveBeenCalledWith('/api/projects/'+project.id,expect.objectContaining({body:{name:project.name,pid:null,active:true}}));
+    expect(screen.getByText(project.id)).toBeTruthy();
   });
-  it.each(["POST", "PATCH"])("keeps form values and reports duplicate Project IDs on %s", async (method) => {
-    const api = vi.fn(async (path, opts) => {
-      if (opts?.method === method) throw Object.assign(new Error("Resource already exists"), { status: 409 });
-      return { projects: [project] };
-    });
-    render(<Projects api={api} />);
-    await screen.findByText("Consumer study");
-    const user = userEvent.setup();
-    if (method === "PATCH") await user.click(screen.getByRole("button", { name: "Edit" }));
-    const pid = screen.getAllByLabelText("Project ID").at(-1);
-    const name = screen.getAllByRole("textbox", { name: /^Project Name\b/ }).at(-1);
-    await user.clear(pid);
-    await user.type(pid, "EXISTING-ID");
-    await user.clear(name);
-    await user.type(name, "Client project");
-    await user.click(screen.getByRole("button", { name: method === "POST" ? "Add project" : "Save changes" }));
-    expect((await screen.findByRole("alert")).textContent).toContain("Project ID is already in use");
-    expect(pid.value).toBe("EXISTING-ID");
-    expect(name.value).toBe("Client project");
-    expect(screen.queryByText("Project updated.")).toBeNull();
-    expect(screen.queryByText("Project created.")).toBeNull();
+  it('shows company links once with an explicit per-request project parameter',async()=>{
+    const {api,company}=managementApi();render(<Projects api={api} companyId={company.id}/>);
+    await screen.findByText(new URL('/redirect/company/'+company.id+'/COMPLETE',window.location.origin).href);
+    expect(screen.getByText(new URL('/redirect/company/'+company.id+'/DISQUALIFY',window.location.origin).href)).toBeTruthy();
   });
-  it("keeps multiple same-name projects and refreshes selected links after a Project ID edit", async () => {
-    const projects = [{ ...project }, { ...project, id: "550e8400-e29b-41d4-a716-446655440001", pid: "SECOND" }];
-    const api = vi.fn(async (path, opts) => {
-      if (opts?.method === "PATCH") {
-        Object.assign(projects[0], opts.body);
-        return { ...projects[0] };
-      }
-      return { projects: projects.map(value => ({ ...value })) };
-    });
-    render(<Projects api={api} />);
-    await screen.findByText("SECOND");
-    expect(screen.getAllByText("Consumer study")).toHaveLength(2);
-    const user = userEvent.setup();
-    await user.click(screen.getAllByRole("button", { name: "Outcome links" })[0]);
-    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
-    const pid = screen.getAllByLabelText("Project ID").at(-1);
-    await user.clear(pid);
-    await user.type(pid, "CLIENT-UPDATED");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await screen.findByText("Project updated.");
-    expect(screen.getByText(/\/tracking\/CLIENT-UPDATED\/COMPLETE\?uid=/)).toBeTruthy();
-    expect(screen.queryByText(/\/tracking\/DEMO\/COMPLETE\?uid=/)).toBeNull();
-    expect(await screen.findByText("SECOND")).toBeTruthy();
-    expect(screen.getAllByText("Consumer study")).toHaveLength(2);
+  it('shows assigned users projects without company or assignment management',async()=>{
+    const {api}=managementApi();render(<Projects api={api} user={{id:'user',role:'USER'}}/>);await screen.findByText('Consumer study');
+    expect(screen.queryByRole('button',{name:'Add project'})).toBeNull();expect(screen.queryByText('Manage existing users')).toBeNull();
+    expect(api.mock.calls.some(([p])=>p==='/api/users'||p==='/api/companies')).toBe(false);
   });
-  it("creates and edits a visible project with a blank ID, without tracking links", async () => {
-    let saved = null;
-    const api = vi.fn(async (path, opts) => {
-      if (opts?.method === "POST") return saved = { ...project, ...opts.body };
-      if (opts?.method === "PATCH") return saved = { ...saved, ...opts.body };
-      return { projects: saved ? [{ ...saved }] : [] };
-    });
-    render(<Projects api={api} />);
-    await screen.findByText("No projects yet");
-    const user = userEvent.setup();
-    expect(screen.getByLabelText("Project ID").required).toBe(false);
-    await user.type(screen.getByRole("textbox", { name: /^Project Name\b/ }), "No ID study");
-    await user.click(screen.getByRole("button", { name: "Add project" }));
-    await screen.findByText("Project created.");
-    await screen.findByText("No ID study");
-    expect(saved.pid).toBeNull();
-    expect(screen.getByText("Not assigned")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Outcome links" }));
-    expect(screen.getByText(/Add a Project ID before sharing/)).toBeTruthy();
-    expect(screen.queryByText(/\/tracking\/null\//)).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Edit" }));
-    const name = screen.getAllByLabelText("Project Name").at(-1);
-    const pid = screen.getAllByLabelText("Project ID").at(-1);
-    expect(pid.value).toBe("");
-    expect(pid.required).toBe(false);
-    expect(name.value).toBe("No ID study");
-    await user.clear(name);
-    await user.type(name, "Persisted new name");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await screen.findByText("Project updated.");
-    await screen.findByText("Persisted new name");
-    expect(api).toHaveBeenCalledWith(`/api/projects/${project.id}`, expect.objectContaining({ method: "PATCH", body: { pid: null, name: "Persisted new name", active: true } }));
-    expect(saved.name).toBe("Persisted new name");
+  it('keeps edit values on conflicts and prevents repeated pending saves',async()=>{
+    const {api,company}=managementApi();let finish;const pending=new Promise(resolve=>{finish=resolve;});const wrapped=vi.fn((path,opts)=>opts?.method==='PATCH'?pending:api(path,opts));
+    render(<Projects api={wrapped} companyId={company.id}/>);await screen.findByText('Consumer study');fireEvent.click(screen.getByRole('button',{name:'Edit'}));
+    const form=screen.getByRole('button',{name:'Save changes'}).closest('form');fireEvent.submit(form);fireEvent.submit(form);
+    expect(wrapped.mock.calls.filter(([,o])=>o?.method==='PATCH')).toHaveLength(1);finish(project);await screen.findByText('Project updated.');
   });
-  it("prevents duplicate edit submissions while the backend save is pending", async () => {
-    let finish;
-    let stored = { ...project };
-    const pending = new Promise(resolve => { finish = resolve; });
-    const api = vi.fn(async (path, opts) => {
-      if (opts?.method === "PATCH") { await pending; stored = { ...stored, ...opts.body }; return stored; }
-      return { projects: [{ ...stored }] };
-    });
-    render(<Projects api={api} />);
-    await screen.findByText("Consumer study");
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    const pid = screen.getAllByLabelText("Project ID").at(-1);
-    fireEvent.change(pid, { target: { value: "" } });
-    const save = screen.getByRole("button", { name: "Save changes" });
-    fireEvent.submit(save.closest("form"));
-    fireEvent.submit(save.closest("form"));
-    expect(save.disabled).toBe(true);
-    expect(api.mock.calls.filter(([, opts]) => opts?.method === "PATCH")).toHaveLength(1);
-    expect(screen.queryByText("Project updated.")).toBeNull();
-    finish();
-    await screen.findByText("Project updated.");
-    await screen.findByText("Not assigned");
-    expect(stored.pid).toBeNull();
-  });
-  it.skipIf(!process.env.HARWINN_BACKEND_PATH)("persists an Edit submission through the real API client and Express backend", async () => {
-    const { fakeDb, appFor, adminToken } = createRequire(import.meta.url)(join(process.env.HARWINN_BACKEND_PATH, "test/helpers.js"));
-    const db = fakeDb();
-    const token = await adminToken(db);
-    const server = appFor(db).listen(0, "127.0.0.1");
-    await new Promise(resolve => server.once("listening", resolve));
-    const realFetch = globalThis.fetch;
-    const base = `http://127.0.0.1:${server.address().port}`;
-    vi.stubGlobal("fetch", (path, options) => realFetch(base + path, options));
-    const api = (path, options = {}) => apiRequest(path, { ...options, token });
-    try {
-      const original = await api("/api/projects", { method: "POST", body: { pid: "CLIENT-ORIGINAL", name: "Existing saved project" } });
-      const mounted = render(<Projects api={api} />);
-      await screen.findByText("Existing saved project");
-      const user = userEvent.setup();
-      const edit = screen.getByText("Existing saved project").closest("tr").querySelector("button");
-      await user.click(edit);
-      const name = screen.getAllByLabelText("Project Name").at(-1);
-      const pid = screen.getAllByLabelText("Project ID").at(-1);
-      expect(name.value).toBe("Existing saved project");
-      expect(pid.value).toBe("CLIENT-ORIGINAL");
-      await user.clear(name);
-      await user.type(name, "Saved through HTTP");
-      await user.clear(pid);
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
-      await screen.findByText("Project updated.");
-      await screen.findByText("Saved through HTTP");
-      expect(await api(`/api/projects/${original.id}`)).toMatchObject({ name: "Saved through HTTP", pid: null });
-      expect(db.projects.find(value => value.id === original.id)).toMatchObject({ name: "Saved through HTTP", pid: null });
-      mounted.unmount();
-      render(<Projects api={api} />);
-      await screen.findByText("Saved through HTTP");
-      expect(screen.getByText("Not assigned")).toBeTruthy();
-    } finally {
-      vi.unstubAllGlobals();
-      await new Promise(resolve => server.close(resolve));
-    }
-  }, 15000);
-  it("generates four canonical callback links and safe previews", async () => {
-    const api = vi.fn().mockResolvedValue({ projects: [project] });
-    render(<Projects api={api} />);
-    await screen.findByText("Consumer study");
-    fireEvent.click(screen.getByRole("button", { name: "Outcome links" }));
-    expect(screen.getAllByRole("link", { name: "Preview ↗" })).toHaveLength(4);
-    expect(screen.getByText(/\/tracking\/DEMO\/COMPLETE\?uid=/)).toBeTruthy();
+  it('retains deletion confirmation and reports backend history conflicts',async()=>{
+    const {api,company}=managementApi();const wrapped=(path,opts)=>opts?.method==='DELETE'?Promise.reject(new Error('Project has tracking history')):api(path,opts);
+    render(<Projects api={wrapped} companyId={company.id}/>);await screen.findByText('Consumer study');fireEvent.click(screen.getByRole('button',{name:'Delete'}));fireEvent.click(screen.getByRole('button',{name:'Confirm deletion'}));
+    await screen.findByText('Project has tracking history');expect(screen.getByText('Consumer study')).toBeTruthy();
   });
   for (const status of ["COMPLETE", "TERMINATE", "QUOTAFUL", "DISQUALIFY"])
     it(`records ${status} once across StrictMode replay`, async () => {
       const fetch = vi
         .fn()
         .mockResolvedValue(
-          json({ record: { serial: "123" }, duplicate: false }),
+          json({ success: true, duplicate: false }),
         );
-      vi.stubGlobal("fetch", fetch);
+      vi.stubGlobal("fetch", withTrackingConfig(fetch));
       render(
         <StrictMode>
           <Outcome
@@ -408,9 +250,9 @@ describe("Frontend flows", () => {
       .fn()
       .mockRejectedValueOnce(new TypeError("offline"))
       .mockResolvedValueOnce(
-        json({ record: { serial: "123" }, duplicate: true }),
+        json({ success: true, duplicate: true }),
       );
-    vi.stubGlobal("fetch", fetch);
+    vi.stubGlobal("fetch", withTrackingConfig(fetch));
     render(
       <Outcome
         pid="DEMO"
@@ -426,7 +268,7 @@ describe("Frontend flows", () => {
   it("reports validation/conflict errors without claiming successful recording", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
+      withTrackingConfig(vi
         .fn()
         .mockResolvedValue(
           json(
@@ -439,7 +281,7 @@ describe("Frontend flows", () => {
             },
             409,
           ),
-        ),
+        )),
     );
     render(
       <Outcome

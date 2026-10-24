@@ -50,9 +50,9 @@ it.skipIf(!process.env.HARWINN_BACKEND_PATH)(
             `uid=u-${status}&transactionId=tx-${status}&inTime=${encodeURIComponent(new Date(Date.now() - 10000).toISOString())}`,
           ),
         );
-        expect(data.status).toBe(status);
-        expect(data.record.loiSeconds).toBeGreaterThanOrEqual(10);
-        expect(typeof data.record.serial).toBe("string");
+        expect(data).toEqual({success:true,duplicate:false});
+        expect(db.records.at(-1).status).toBe(status);
+        expect(db.records.at(-1).loiSeconds).toBeGreaterThanOrEqual(10);
       }
       const records = await request(
         `/api/records?${recordQuery({ pid: project.pid, status: "COMPLETE" }, 1, 10)}`,
@@ -97,7 +97,7 @@ it.skipIf(!process.env.HARWINN_BACKEND_PATH)(
       const retry = await request(trackingPath(updated.pid, "COMPLETE",
         `uid=u-COMPLETE&transactionId=tx-COMPLETE&inTime=${encodeURIComponent(records.records[0].inTime)}`));
       expect(retry.duplicate).toBe(true);
-      expect(retry.record.projectId).toBe(project.id);
+      expect(retry).toEqual({success:true,duplicate:true});
       const report = await request(`/api/records?pid=${updated.pid}`, { token });
       expect(report.total).toBe(4);
       expect(report.records.every(row => row.project.pid === updated.pid)).toBe(true);
