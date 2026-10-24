@@ -11,6 +11,7 @@ const navItems = [
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  
   return (
     <header className="fixed left-0 top-0 z-50 w-full border-b border-[#8f0808]/10 bg-white/95 shadow-sm backdrop-blur-xl">
       <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">

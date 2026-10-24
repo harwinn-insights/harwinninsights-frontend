@@ -172,7 +172,7 @@ describe("Frontend flows", () => {
     await screen.findByText("No projects yet");
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Project ID"), "DEMO");
-    await user.type(screen.getByLabelText("Project Name"), "Consumer study");
+    await user.type(screen.getByRole("textbox", { name: /^Project Name\b/ }), "Consumer study");
     await user.click(screen.getByRole("button", { name: "Add project" }));
     await screen.findByText("Project created.");
     expect(api).toHaveBeenCalledWith(
@@ -229,7 +229,7 @@ describe("Frontend flows", () => {
     const user = userEvent.setup();
     if (method === "PATCH") await user.click(screen.getByRole("button", { name: "Edit" }));
     const pid = screen.getAllByLabelText("Project ID").at(-1);
-    const name = screen.getAllByLabelText("Project Name").at(-1);
+    const name = screen.getAllByRole("textbox", { name: /^Project Name\b/ }).at(-1);
     await user.clear(pid);
     await user.type(pid, "EXISTING-ID");
     await user.clear(name);
@@ -277,7 +277,7 @@ describe("Frontend flows", () => {
     await screen.findByText("No projects yet");
     const user = userEvent.setup();
     expect(screen.getByLabelText("Project ID").required).toBe(false);
-    await user.type(screen.getByLabelText("Project Name"), "No ID study");
+    await user.type(screen.getByRole("textbox", { name: /^Project Name\b/ }), "No ID study");
     await user.click(screen.getByRole("button", { name: "Add project" }));
     await screen.findByText("Project created.");
     await screen.findByText("No ID study");

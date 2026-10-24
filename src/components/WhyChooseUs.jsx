@@ -9,6 +9,7 @@ const reasons = [
     title: "Research Expertise",
     text: "Our approach combines fieldwork experience, market understanding and practical research thinking.",
   },
+
   {
     number: "03",
     title: "Fast & Flexible",
@@ -25,9 +26,7 @@ function WhyChooseUs() {
   return (
     <section className="bg-slate-950 py-24 text-white sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-
         <div className="grid gap-14 lg:grid-cols-[0.75fr_1.25fr]">
-
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">
               Why Harwinn
@@ -35,14 +34,12 @@ function WhyChooseUs() {
 
             <h2 className="mt-5 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
               More than data.
-              <span className="block text-cyan-300">
-                Meaningful insight.
-              </span>
+              <span className="block text-cyan-300">Meaningful insight.</span>
             </h2>
 
             <p className="mt-6 max-w-md text-base leading-8 text-slate-400">
-              We combine people, research and technology to help businesses
-              see their markets more clearly.
+              We combine people, research and technology to help businesses see
+              their markets more clearly.
             </p>
           </div>
 
@@ -62,9 +59,7 @@ function WhyChooseUs() {
                   </span>
                 </div>
 
-                <h3 className="mt-10 text-xl font-bold">
-                  {reason.title}
-                </h3>
+                <h3 className="mt-10 text-xl font-bold">{reason.title}</h3>
 
                 <p className="mt-4 text-sm leading-7 text-slate-400">
                   {reason.text}
@@ -72,7 +67,6 @@ function WhyChooseUs() {
               </div>
             ))}
           </div>
-
         </div>
       </div>
     </section>

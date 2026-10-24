@@ -23,7 +23,7 @@ export default function Router() {
       "/admin/dashboard",
       "/admin/records",
       "/admin/projects",
-    ].includes(path)
+    ].includes(path) || /^\/admin\/projects\/companies\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path)
   )
     return <Admin path={path} />;
   const match = /^\/tracking\/([^/]+)\/([^/]+)$/.exec(path);

@@ -11,6 +11,7 @@ const faqs = [
     answer:
       "We support consumer research, user research, field interviews, quantitative studies, recruitment-led assignments and customised research projects.",
   },
+  
   {
     question: "Do you offer both fieldwork and research consulting?",
     answer:

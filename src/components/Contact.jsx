@@ -12,6 +12,7 @@ function Contact() {
     setSending(true);
     setMessage("");
 
+    
     emailjs
       .sendForm(
         "YOUR_SERVICE_ID",

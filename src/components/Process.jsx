@@ -14,6 +14,7 @@ const steps = [
     title: "Execute",
     text: "Our team manages recruitment, fieldwork and research execution with quality checks.",
   },
+  
   {
     number: "04",
     title: "Deliver",

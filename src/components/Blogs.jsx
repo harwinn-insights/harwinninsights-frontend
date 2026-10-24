@@ -12,6 +12,7 @@ const blogs = [
     title: "How Market Research Helps Businesses Make Smarter Decisions",
     text: "Understanding customers, competitors and market opportunities can turn uncertainty into confident business decisions.",
   },
+  
   {
     image: blog2,
     category: "CONSUMER INSIGHTS",

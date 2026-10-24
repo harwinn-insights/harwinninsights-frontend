@@ -19,6 +19,7 @@ const regions = [
       "Peru",
     ],
   },
+  
   {
     title: "Europe",
     image: technology,

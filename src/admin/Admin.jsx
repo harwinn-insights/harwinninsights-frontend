@@ -76,6 +76,7 @@ function Login({ onLogin }) {
 export default function Admin({ path }) {
   const [session, setSession] = useState(readSession),
     [checked, setChecked] = useState(false),
+    [currentUser, setCurrentUser] = useState(null),
     [error, setError] = useState(null),
     [busy, setBusy] = useState(false);
   const expire = useCallback(() => {
@@ -103,8 +104,8 @@ export default function Admin({ path }) {
 
     // eslint-disable-next-line react/set-state-in-effect -- Session state changes only after this asynchronous response.
     api("/api/auth/me", { signal: controller.signal }).then(
-      () => {
-        if (active) setChecked(true);
+      (value) => {
+        if (active) {setCurrentUser(value);setChecked(true);}
       },
       (err) => {
         if (active && err.name !== "AbortError") setError(err);
@@ -163,7 +164,7 @@ export default function Admin({ path }) {
         </section>
       </div>
     );
-  const section = path.endsWith("/projects")
+  const section = path === "/admin/projects" || path.startsWith("/admin/projects/")
     ? "projects"
     : path.endsWith("/records")
       ? "records"
@@ -201,8 +202,8 @@ export default function Admin({ path }) {
               {item === "dashboard"
                 ? "Overview"
                 : item === "records"
-                  ? "Tracking records"
-                  : "Projects"}
+                  ? "Tracking Records"
+                  : "Admin"}
             </a>
           ))}
         </nav>
@@ -216,7 +217,7 @@ export default function Admin({ path }) {
       </aside>
       <main className="hi-main">
         <header className="hi-topbar">
-          <span>HARWINN INSIGHTS / {section}</span>
+          <span>HARWINN INSIGHTS / {section === "projects" ? "Admin" : section}</span>
           <span className="hi-live">● Admin session</span>
         </header>
         <ErrorMessage error={error} />
@@ -225,7 +226,7 @@ export default function Admin({ path }) {
         ) : section === "records" ? (
           <Records api={api} />
         ) : (
-          <Projects api={api} />
+          <Projects key={path} api={api} user={currentUser} companyId={/^\/admin\/projects\/companies\/([^/]+)$/.exec(path)?.[1]} />
         )}
       </main>
     </div>

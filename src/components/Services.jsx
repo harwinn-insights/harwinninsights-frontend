@@ -12,6 +12,7 @@ const services = [
     image: quantitative,
     text: "Online surveys, CATI, face-to-face research, market sizing, brand tracking, pricing and segmentation.",
   },
+  
   {
     title: "Qualitative Research",
     image: qualitative,

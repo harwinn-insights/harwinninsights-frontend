@@ -90,8 +90,8 @@ export default function Dashboard({ api }) {
                 <div className="hi-empty">
                   <h2>Ready for your first response</h2>
                   <p>
-                    Create a project and share its outcome links with your
-                    survey provider.
+                    Register a project under its company and configure that
+                    company’s permanent callbacks with the survey provider.
                   </p>
                   <a
                     href="/admin/projects"
@@ -100,7 +100,7 @@ export default function Dashboard({ api }) {
                       navigate("/admin/projects");
                     }}
                   >
-                    Manage projects →
+                    Manage companies →
                   </a>
                 </div>
               )}
@@ -112,8 +112,9 @@ export default function Dashboard({ api }) {
       <section className="hi-panel hi-note">
         <h2>Survey workflow</h2>
         <p>
-          Create an active project, connect its four outcome links to your
-          survey, then monitor responses here. Out time, IP address and length
+          Configure each company’s four callbacks once, then register each
+          project’s external PID under that company. Respondents use the provider’s
+          survey URL directly. Out time, IP address and length
           of interview are recorded by the backend; country may be unavailable.
         </p>
       </section>

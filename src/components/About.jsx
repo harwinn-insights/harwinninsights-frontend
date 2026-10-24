@@ -11,6 +11,7 @@ function About() {
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-[#a87920]">
               About Harwinn
             </p>
+            
 
             <h2 className="mt-7 max-w-3xl text-5xl font-black leading-[1.08] tracking-tight text-[#8f0808] sm:text-6xl">
               Research Without

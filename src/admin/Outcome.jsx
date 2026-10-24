@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from "react";
-import { request, trackingPath } from "../lib/api.js";
+import { request, validatedTrackingPath } from "../lib/api.js";
 import logo from "../assets/harwinn-logo-fav.jpeg";
 import "./admin.css";
 const content = {
@@ -38,8 +38,8 @@ export default function Outcome({ pid, status, search = "" }) {
     if (!pid) return;
     let active = true;
     // Share the request across StrictMode's effect replay. Retries keep the original transaction ID.
-    pending.current ??= request(
-      trackingPath(pid, status, search.replace(/^\?/, "")),
+    pending.current ??= request("/api/tracking/config").then(({ paramMap }) =>
+      request(validatedTrackingPath(pid, status, search.replace(/^\?/, ""), paramMap)),
     );
     pending.current.then(
       (data) => {
@@ -88,8 +88,7 @@ export default function Outcome({ pid, status, search = "" }) {
           <p className="hi-muted" role="status">
             {result.duplicate
               ? "Your response was already recorded."
-              : "Your response has been recorded."}{" "}
-            Reference: {result.record.serial}
+              : "Your response has been recorded."}
           </p>
         )}
         {error && (

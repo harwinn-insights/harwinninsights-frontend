@@ -16,6 +16,7 @@ function Industries() {
 
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
 
+
           <div>
             <p className="mb-4 text-sm font-bold uppercase tracking-[0.2em] text-cyan-600">
               Industries

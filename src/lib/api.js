@@ -54,7 +54,7 @@ export function recordQuery(filters, page = 1, pageSize = 25) {
     page: String(page),
     pageSize: String(pageSize),
   });
-  for (const field of ["pid", "uid", "status", "country", "from", "to"]) {
+  for (const field of ["recordId", "companyName", "companyCode", "pid", "uid", "status", "country", "from", "to"]) {
     const value = filters[field]?.trim();
     if (value)
       params.set(
@@ -69,6 +69,23 @@ export function recordQuery(filters, page = 1, pageSize = 25) {
 export function trackingPath(pid, status, params = "") {
   if (!OUTCOMES.includes(status)) throw new Error("Unknown outcome");
   return `/redirect/${encodeURIComponent(pid)}/${status}${params ? `?${params}` : ""}`;
+}
+export function validatedTrackingPath(pid, status, params, paramMap) {
+  const query = new URLSearchParams(params);
+  const identifier = value => typeof value === "string" && value.length <= 128 && new RegExp(ID_PATTERN).test(value);
+  const fail = message => { throw new ApiError(message, 400, "VALIDATION_ERROR"); };
+  if (!identifier(pid)) fail("Invalid project PID. No outcome was submitted.");
+  for (const field of ["uid", "transactionId"]) {
+    const name = paramMap?.[field];
+    if (typeof name !== "string") fail("Tracking configuration is unavailable. No outcome was submitted.");
+    const values = query.getAll(name);
+    if (values.length !== 1 || !identifier(values[0]))
+      fail(`A single valid ${name} is required. No outcome was submitted. Use the original survey callback link or the outcome preview.`);
+  }
+  if ([...query.keys()].some(name => !Object.values(paramMap).includes(name)))
+    fail("Unknown tracking parameters. Company projects must use their permanent company intake link. No outcome was submitted.");
+  // Preserve the original encoded query and stable transaction identifier on retries.
+  return trackingPath(pid, status, params);
 }
 export function readSession() {
   try {

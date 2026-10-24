@@ -8,7 +8,9 @@ export function RecordTable({ records }) {
         <thead>
           <tr>
             {[
-              "Serial",
+              "Record ID",
+              "Company",
+              "Project UUID",
               "PID",
               "UID",
               "Username",
@@ -29,6 +31,8 @@ export function RecordTable({ records }) {
           {records.map((row) => (
             <tr key={row.serial}>
               <td>{row.serial}</td>
+              <td>{row.project?.company ? `${row.project.company.code} — ${row.project.company.name}` : "—"}</td>
+              <td>{row.projectId || row.project?.id || "—"}</td>
               <td>{row.project?.pid || "—"}</td>
               <td>{row.uid}</td>
               <td>{row.username || "—"}</td>
@@ -51,7 +55,7 @@ export function RecordTable({ records }) {
     </div>
   );
 }
-const empty = { pid: "", uid: "", status: "", country: "", from: "", to: "" };
+const empty = { recordId: "", companyName: "", companyCode: "", pid: "", uid: "", status: "", country: "", from: "", to: "" };
 export default function Records({ api }) {
   const [draft, setDraft] = useState(empty),
     [filters, setFilters] = useState(empty),
@@ -119,6 +123,9 @@ export default function Records({ api }) {
       </div>
       <section className="hi-panel">
         <form className="hi-filters" onSubmit={apply}>
+          {field("recordId", "Record ID", { pattern: "[1-9][0-9]{0,18}", maxLength: 19, inputMode: "numeric" })}
+          {field("companyName", "Company Name", { maxLength: 200 })}
+          {field("companyCode", "Company ID", { pattern: ID_PATTERN, maxLength: 128 })}
           {field("pid", "Project PID", { pattern: ID_PATTERN, maxLength: 128 })}
           {field("uid", "Respondent UID", {
             pattern: ID_PATTERN,
@@ -166,7 +173,7 @@ export default function Records({ api }) {
           </div>
         </form>
         <p className="hi-muted">
-          PID and UID use exact matches. Date filters include both endpoints;
+          Record ID, Company ID (company code), PID and UID use exact matches. Company Name matches part of the name, ignoring case. Date filters include both endpoints;
           displayed times use your browser’s timezone.
         </p>
       </section>

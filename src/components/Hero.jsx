@@ -12,6 +12,7 @@ function Hero() {
           alt="HARWINN Insights"
           className="h-full w-full object-cover object-center"
         />
+        
         <div className="absolute inset-0 bg-white/5" />
       </div>
 

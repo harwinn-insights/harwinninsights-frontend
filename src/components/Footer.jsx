@@ -11,6 +11,7 @@ function Footer() {
               HARWINN
             </h2>
 
+
             <p className="mt-2 text-sm font-semibold uppercase tracking-[0.25em] text-[#d8b45b]">
               Insights
             </p>

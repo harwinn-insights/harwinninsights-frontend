@@ -14,6 +14,7 @@ function Reach() {
     "Pan India",
   ];
 
+  
   return (
     <section className="relative overflow-hidden bg-slate-950 py-24 text-white sm:py-28">
       <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-cyan-400/10 blur-3xl" />
