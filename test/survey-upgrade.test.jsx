@@ -31,14 +31,28 @@ it('Manage Company scopes the project request and creates with readonly company 
   expect(api).toHaveBeenCalledWith('/api/projects',{method:'POST',body:{companyId:company.id,pid:'NEW',name:'New study'}});
 });
 
-it('tracking columns align and repeated UID/PID attempts stay separate with null metadata',()=>{
-  const records=['TERMINATE','DISQUALIFY','COMPLETE','TERMINATE'].map((status,i)=>({serial:String(i+1),projectId:project.id,project,uid:'RAHU1001',status,transactionId:'t'+i}));
+it('tracking columns show external PID and callback IP without substituting UUIDs or missing metadata',()=>{
+  const records=['TERMINATE','DISQUALIFY','COMPLETE','QUOTAFUL'].map((status,i)=>({serial:String(i+1),projectId:project.id,project,uid:'RAHU1001',status,transactionId:'t'+i,ipAddress:i===0?'192.0.2.10':i===1?'2001:db8::10':null,loiSeconds:i===0?0:null}));
+  records[2].project={...project,pid:null};
+  records[3].project=null;
   render(<RecordTable records={records}/>);
   const rows=screen.getAllByRole('row'); expect(rows).toHaveLength(5);
-  const cells=within(rows[1]).getAllByRole('cell');
-  expect(cells).toHaveLength(within(rows[0]).getAllByRole('columnheader').length);
-  expect(cells[1].textContent).toBe('C — Client'); expect(cells[2].textContent).toBe(project.id);
-  expect(cells[3].textContent).toBe(project.pid); expect(cells[4].textContent).toBe('RAHU1001');
-  expect(cells[6].textContent).toBe('TERMINATE'); expect(cells[9].textContent).toBe('—');
-  expect(cells[12].textContent).toBe('t0');
+  const headers=within(rows[0]).getAllByRole('columnheader').map(cell=>cell.textContent);
+  expect(headers.slice(0,7)).toEqual(['Record ID','UID','PID (external)','Status / Outcome','IP','Company','Project UUID']);
+  for(const [index,row] of rows.slice(1).entries()) {
+    const cells=within(row).getAllByRole('cell');
+    expect(cells).toHaveLength(headers.length);
+    const value=heading=>cells[headers.indexOf(heading)].textContent;
+    expect(value('UID')).toBe('RAHU1001');
+    expect(value('PID (external)')).toBe(index<2?project.pid:'\u2014');
+    expect(value('PID (external)')).not.toBe(project.id);
+    expect(value('Project UUID')).toBe(project.id);
+    expect(value('Status / Outcome')).toBe(records[index].status);
+    expect(value('IP')).toBe(records[index].ipAddress || '\u2014');
+    expect(value('LOI (seconds)')).toBe(index===0?'0':'\u2014');
+    expect(value('Transaction ID')).toBe('t'+index);
+    expect(value('Company')).toBe(index===3?'\u2014':'C \u2014 Client');
+  }
+  expect(screen.getByRole('region',{name:/Tracking records table/}).tabIndex).toBe(0);
+  expect(screen.getByText(/not verified as the respondent/)).toBeTruthy();
 });

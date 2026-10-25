@@ -3,56 +3,63 @@ import { OUTCOMES, ID_PATTERN, recordQuery, formatDate } from "../lib/api.js";
 import { ErrorMessage, Pager } from "./ui.jsx";
 export function RecordTable({ records }) {
   return (
-    <div className="hi-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {[
-              "Record ID",
-              "Company",
-              "Project UUID",
-              "PID",
-              "UID",
-              "Username",
-              "Status",
-              "In time",
-              "Out time",
-              "LOI (seconds)",
-              "IP address",
-              "Country",
-              "Transaction ID",
-              "Created",
-            ].map((title) => (
-              <th key={title}>{title}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((row) => (
-            <tr key={row.serial}>
-              <td>{row.serial}</td>
-              <td>{row.project?.company ? `${row.project.company.code} — ${row.project.company.name}` : "—"}</td>
-              <td>{row.projectId || row.project?.id || "—"}</td>
-              <td>{row.project?.pid || "—"}</td>
-              <td>{row.uid}</td>
-              <td>{row.username || "—"}</td>
-              <td>
-                <span className={`hi-badge hi-status-${row.status}`}>
-                  {row.status}
-                </span>
-              </td>
-              <td>{formatDate(row.inTime)}</td>
-              <td>{formatDate(row.outTime)}</td>
-              <td>{row.loiSeconds ?? "—"}</td>
-              <td>{row.ipAddress || "—"}</td>
-              <td>{row.country || "—"}</td>
-              <td>{row.transactionId}</td>
-              <td>{formatDate(row.createdAt)}</td>
+    <>
+      <p className="hi-muted">
+        PID is the provider’s external project ID. IP is the recorded callback source;
+        it is not verified as the respondent’s IP. Scroll horizontally to view all columns.
+      </p>
+      <div className="hi-table-wrap rounded-lg border border-slate-200" role="region" aria-label="Tracking records table, scroll to view all columns" tabIndex={0}>
+        <table className="min-w-[90rem]">
+          <caption className="sr-only">Survey tracking records</caption>
+          <thead>
+            <tr>
+              {[
+                "Record ID",
+                "UID",
+                "PID (external)",
+                "Status / Outcome",
+                "IP",
+                "Company",
+                "Project UUID",
+                "Username",
+                "In time",
+                "Out time",
+                "LOI (seconds)",
+                "Country",
+                "Transaction ID",
+                "Created",
+              ].map((title) => (
+                <th key={title} scope="col">{title}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {records.map((row) => (
+              <tr key={row.serial}>
+                <td>{row.serial}</td>
+                <td className="min-w-40 whitespace-normal! break-all">{row.uid || "—"}</td>
+                <td className="min-w-40 whitespace-normal! break-all">{row.project?.pid || "—"}</td>
+                <td>
+                  <span className={`hi-badge hi-status-${row.status}`}>
+                    {row.status || "—"}
+                  </span>
+                </td>
+                <td className="min-w-40 whitespace-normal! break-all font-mono">{row.ipAddress || "—"}</td>
+                <td className="min-w-48 whitespace-normal!">{row.project?.company ? `${row.project.company.code} — ${row.project.company.name}` : "—"}</td>
+                <td className="min-w-48 whitespace-normal! break-all font-mono">{row.projectId || row.project?.id || "—"}</td>
+                <td>{row.username || "—"}</td>
+                <td>{formatDate(row.inTime)}</td>
+                <td>{formatDate(row.outTime)}</td>
+                <td>{row.loiSeconds ?? "—"}</td>
+                <td>{row.country || "—"}</td>
+                <td>{row.transactionId}</td>
+                <td>{formatDate(row.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 const empty = { recordId: "", companyName: "", companyCode: "", pid: "", uid: "", status: "", country: "", from: "", to: "" };
