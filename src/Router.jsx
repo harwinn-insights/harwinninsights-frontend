@@ -2,6 +2,7 @@
 import App from "./App.jsx";
 import Admin from "./admin/Admin.jsx";
 import Outcome from "./admin/Outcome.jsx";
+import RecordedOutcome from './admin/RecordedOutcome.jsx';
 import { OUTCOMES } from "./lib/api.js";
 
 export default function Router() {
@@ -46,7 +47,9 @@ export default function Router() {
   }
   const outcome =
     /^\/(?:tracking\/)?(complete|terminate|quotaful|disqualify)$/i.exec(path);
-  if (outcome) return <Outcome status={outcome[1].toUpperCase()} />;
+  if (outcome) return path.startsWith('/tracking/')
+    ? <Outcome status={outcome[1].toUpperCase()} />
+    : <RecordedOutcome key={location} expectedStatus={outcome[1].toUpperCase()} />;
   return (
     <div className="hi-app hi-center">
       <section className="hi-panel">

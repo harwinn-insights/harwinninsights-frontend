@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    { "source": "/complete", "headers": [{ "key": "Cache-Control", "value": "no-store" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/terminate", "headers": [{ "key": "Cache-Control", "value": "no-store" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/quotaful", "headers": [{ "key": "Cache-Control", "value": "no-store" }, { "key": "Referrer-Policy", "value": "no-referrer" }] },
+    { "source": "/disqualify", "headers": [{ "key": "Cache-Control", "value": "no-store" }, { "key": "Referrer-Policy", "value": "no-referrer" }] }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

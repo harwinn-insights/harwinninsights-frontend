@@ -4,6 +4,18 @@ The existing public website at `/` remains in `src/App.jsx` and its original com
 
 ## Run locally
 
+Verified outcome pages now show the saved UID, external PID and recorded status
+through a single-use, ten-minute receipt bound to the persisted row. The respondent
+network IP is captured separately during verification and displayed only when it
+matches this request's validated network address; otherwise it shows Unavailable.
+Callback IP and internal identifiers remain private. The new nullable respondentIp
+column must be migrated before using the updated backend. See
+`../Backend/docs/RESPONDENT_NETWORK_IP.md`. Restart the local backend and retry the
+original callback after updating; old or consumed receipts cannot be reused. See
+`../Backend/docs/CALLBACK_OUTCOME_REDIRECT.md` for local instructions and the current
+single-instance receipt-store limitation (shared atomic storage is required before
+serverless/multi-instance rollout).
+
 ```powershell
 npm.cmd ci
 npm.cmd run dev
@@ -30,9 +42,9 @@ Both dev and preview proxy `/api` and `/redirect` to `http://localhost:3000`, av
 - `/tracking/:pid/:status?uid=...&transactionId=...`: persists the outcome through the corresponding backend `GET /redirect/:pid/:status` and then displays the outcome page. Status must be COMPLETE, TERMINATE, QUOTAFUL or DISQUALIFY. Optional username/inTime and custom externally mapped query names are passed through unchanged to the backend. Do not include unrelated parameters: the backend rejects them. Transaction IDs must remain stable for retries. A conflicting retry shows an error, never a success message.
 - `/tracking/complete`, `/tracking/terminate`, `/tracking/quotaful`, `/tracking/disqualify`: safe design previews without persistence. `/complete`, `/terminate`, `/quotaful`, `/disqualify` are aliases.
 
-Company Details generates permanent company callbacks with external projectId={PID} and the configured UID field only. Internal references are backend-managed; UID-only acceptance requires approved database project/UID uniqueness. Existing legacy /tracking URLs still require provider transaction IDs. If REDIRECT_PARAM_MAP is configured differently later, use those agreed parameter names in the links. Direct backend `/redirect` URLs still return its JSON contract. Use the frontend `/tracking` URLs to display these pages.
+Company Details generates permanent company callbacks with external projectId={PID} and the configured UID field only. Internal references are backend-managed; UID-only acceptance requires approved database project/UID uniqueness. Existing legacy /tracking URLs still require provider transaction IDs. If REDIRECT_PARAM_MAP is configured differently later, use those agreed parameter names in the links. Backend callbacks preserve JSON responses unless an existing destination applies or the verified browser redirect fallback is enabled.
 
-The local backend has no OUTCOME_URLS destinations configured. These frontend recording pages expect its JSON response; enabling external 303 destinations later requires adapting the flow. To show a page after the backend has already persisted an outcome, use the preview route as the destination, not the recording route.
+`/complete`, `/terminate`, `/quotaful`, `/disqualify` require a short-lived backend-signed receipt, verified through POST `/api/tracking/outcome`. They reuse the branded outcome UI and never infer recording from the route alone. Explicit `/tracking/complete` etc. remain previews. Do not configure a plain preview URL as a recorded-result destination. See `../Backend/docs/CALLBACK_OUTCOME_REDIRECT.md` for the backend opt-in, existing destination precedence, provider limitations and rollout. Configure production VITE_API_BASE_URL for the actual backend; the local .env points to localhost. For unit tests use VITE_API_BASE_URL=/ so mocked API paths stay relative.
 
 Authentication uses bearer tokens in sessionStorage, scoped to the browser tab; passwords are never stored. Session expiry and HTTP 401 clear the session. Network failures have a 20-second timeout and retry controls. Backend errors show the sanitized message and support request ID. Overview counts are separate live requests, so simultaneous new records can make totals briefly differ.
 

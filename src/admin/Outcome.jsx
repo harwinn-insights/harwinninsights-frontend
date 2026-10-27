@@ -28,7 +28,7 @@ const content = {
     symbol: "◇",
   },
 };
-export default function Outcome({ pid, status, search = "" }) {
+export default function Outcome({ pid, status, search = "", verified = false, publicRecord }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
@@ -57,33 +57,43 @@ export default function Outcome({ pid, status, search = "" }) {
     };
   }, [pid, status, search, attempt]);
   const text = content[status];
+  const confirmed = verified || Boolean(pid && result && !error);
+  const labels = { COMPLETE: 'COMPLETED', TERMINATE: 'TERMINATED', QUOTAFUL: 'QUOTA FULL', DISQUALIFY: 'DISQUALIFIED' };
   return (
     <div className="hi-app hi-center hi-outcome">
-      <section className="hi-panel">
-        {!pid && <p className="hi-eyebrow">Outcome preview · no response recorded</p>}
+      <section className={`hi-panel${confirmed ? ' hi-thank-you' : ''}`} aria-label="Survey outcome">
+        {!pid && !verified && <p className="hi-eyebrow">Outcome preview · no response recorded</p>}
         <a href="/">
           <img className="hi-logo" src={logo} alt="HARWINN INSIGHTS" />
         </a>
-        <div className={`hi-outcome-icon hi-status-${status}`}>
+        <div className={`hi-outcome-icon hi-status-${status}`} aria-hidden="true">
           {text.symbol}
         </div>
         <span className={`hi-badge hi-status-${status}`}>
-          {status === "QUOTAFUL" ? "Quota full" : status.toLowerCase()}
+          {confirmed ? labels[status] : status === "QUOTAFUL" ? "Quota full" : status.toLowerCase()}
         </span>
         <h1>
           {error
             ? "We could not record your outcome"
             : pid && !result
               ? "Saving your survey outcome…"
-              : text.title}
+              : confirmed ? 'Thank you!' : text.title}
         </h1>
         <p>
           {error
             ? error.message
             : pid && !result
               ? "Please keep this page open while we confirm your response."
-              : text.detail}
+              : confirmed ? <>Your survey has been <strong>{labels[status]}</strong>.</> : text.detail}
         </p>
+        {verified && <p className="hi-muted" role="status">Thank you for your time. Your response has been recorded.</p>}
+        {verified && publicRecord && <dl className="hi-outcome-details" aria-label="Recorded response details">
+          <div><dt>UID</dt><dd>{publicRecord.uid}</dd></div>
+          <div><dt>PID</dt><dd>{publicRecord.pid}</dd></div>
+          <div><dt>Recorded status</dt><dd>{publicRecord.status}</dd></div>
+          <div><dt>Respondent IP Address</dt><dd>{publicRecord.respondentIp || 'Unavailable'}</dd></div>
+        </dl>}
+        {verified && publicRecord && <p className="hi-muted">Your network address is recorded with this response when available. A proxy or VPN may affect the address observed by our server.</p>}
         {pid && result && (
           <p className="hi-muted" role="status">
             {result.duplicate
